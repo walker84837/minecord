@@ -7,6 +7,10 @@ discord:
   channel-id: "CHANNEL_ID"
   # If the sender from Discord doesn't have a role, use this name.
   default-role: "Default"
+  # Enables sending messages on Discord such as when the server starts up, shuts off, etc.
+  status-messages: true
+  # Send a message on Discord saying that a player joined or left the server.
+  player-join-messsages: false
 message:
   # How a message looks when sent from Minecraft
   minecraft: "**$user_name**: $message"

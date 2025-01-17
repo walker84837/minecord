@@ -17,6 +17,8 @@ case class Configuration(
     token: String,
     channelId: String,
     defaultRole: String,
+    sendStatusMessages: Boolean,
+    sendPlayerJoinMessages: Boolean,
     discordMessage: String,
     minecraftMessage: String,
 )
@@ -25,6 +27,8 @@ class MineCord extends JavaPlugin with Listener {
   private var jda: Option[JDA] = None
   private implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
   private var config: Configuration = _
+  private var discordBotManager: DiscordBotManager = _
+  val logger = this.getLogger
 
   private def isFolia: Boolean = {
     try {
@@ -40,12 +44,15 @@ class MineCord extends JavaPlugin with Listener {
       getConfig.getString("discord.token"),
       getConfig.getString("discord.channel-id"),
       getConfig.getString("discord.default-role"),
+      getConfig.getBoolean("discord.status-messages"),
+      getConfig.getBoolean("discord.player-join-messsages"),
       getConfig.getString("message.discord"),
       getConfig.getString("message.minecraft")
     )
   }
 
   private def validateConfig(config: Configuration): Boolean = {
+    logger.info("Validating configuration file...")
     if (
       config.token.isEmpty || config.channelId.isEmpty ||
       config.channelId == "CHANNEL_ID" || config.token == "BOT_TOKEN"
@@ -68,15 +75,23 @@ class MineCord extends JavaPlugin with Listener {
       return
     }
 
-    val discordBotManager = new DiscordBotManager(this, config)(ec)
+    logger.info(s"Hello World! I'm running on ${if (isFolia) "Folia" else "Bukkit"}")
+
+    discordBotManager = new DiscordBotManager(this, config)(ec)
     discordBotManager.startBot()
+
+    if (config.sendStatusMessages) {
+      discordBotManager.sendMessageToDiscord("**Server Status** The server is online.")
+    }
 
     getServer.getPluginManager.registerEvents(new MinecraftChatBridge(config, discordBotManager), this)
   }
 
   override def onDisable(): Unit = {
-    jda.foreach(_.shutdown())
-    jda = None
+    if (config.sendStatusMessages) {
+      discordBotManager.sendMessageToDiscord("**Server Status** The server is shutting down.")
+    }
+    discordBotManager.shutdownBot()
   }
 }
 
